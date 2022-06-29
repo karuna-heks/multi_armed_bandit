@@ -41,7 +41,7 @@ class Environment:
                                  noise_width=0.1))
      
     def _get_intervals(self, probabilities_list) -> (pd.DataFrame, float):
-        # form a list of ranges based on the list of dropped probabilities
+        # form a list of ranges based on the list of received probabilities
         
         # the input is a list with a set of probabilities for each hand
         
@@ -79,6 +79,7 @@ class Environment:
             
             prob_distr = np.random.rand(int(self.earns*max_prob))*max_prob
             # generate self.earns random numbers in the range of sum of probabilities
+            # adding a max_prob multiplier to the number of generated values makes the final distribution more realistic
             
             arm_reward = Counter()
             for prob in prob_distr:
@@ -93,7 +94,7 @@ class Environment:
             
             
             yield step_result
-        self.report_df = pd.DataFrame(each_step_distr)
+        self.simulation_report_df = pd.DataFrame(each_step_distr)
     
     def select_arms(self, selected_arms: list):
         self.selected_arms = selected_arms
@@ -101,8 +102,9 @@ class Environment:
     def run_bandit_sim(self):
         # run environment simulation when limited environment information is returned
         sim_time_sec = 0
-        each_step_distr = []
-        available_arms = []
+        each_step_distr = [] # for report (plot)
+        each_step_reward = [] # for report (metrics calculation)
+        available_arms = [] # for feedback to agent
 
         time_range = int((self.time_finish - self.time_start).total_seconds())
         for sim_time_sec in tqdm(range(0, time_range, self.dt)):
@@ -118,6 +120,7 @@ class Environment:
             
             prob_distr = np.random.rand(int(self.earns*max_prob))*max_prob
             # generate self.earns random numbers in the range of sum of probabilities
+            # adding a max_prob multiplier to the number of generated values makes the final distribution more realistic
             
             arm_reward = Counter()
             for prob in prob_distr:
@@ -132,18 +135,36 @@ class Environment:
             
             
             available_arms = list(set(available_arms + list(arm_reward.keys())))
+            step_reward = {i:arm_reward[i] for i in self.selected_arms}
             step_result_for_agent = {"time_sec": sim_time_sec, 
                                      "available_arms": available_arms,
-                                     "step_reward": {i:arm_reward[i] for i in self.selected_arms}}
+                                     "step_reward": step_reward}
             # save the result for the step report
 
             
+            # save the results for later metrics calculation
+            best_arms_key_reward = dict(arm_reward.most_common()[0:len(self.selected_arms)])
+            actual_earned = sum(step_reward.values())
+            could_earned = sum(best_arms_key_reward.values())
+            selected_arms = list(step_reward.keys())
+            best_arms = list(best_arms_key_reward.keys())
+            
+            step_result_for_metrics = {"time_sec": sim_time_sec, 
+                                       "actual_earned": actual_earned,
+                                       "could_be_earned": could_earned,
+                                       "selected_arms": selected_arms,
+                                       "best_arms": best_arms}
+            each_step_reward.append(step_result_for_metrics)
+            
+            
+            
             yield step_result_for_agent
             
-        self.report_df = pd.DataFrame(each_step_distr)
+        self.simulation_report_df = pd.DataFrame(each_step_distr)
+        self.rewards_report_df = pd.DataFrame(each_step_reward)
     
     def get_report_df(self):
-        return self.report_df
+        return self.simulation_report_df
 
 
 if __name__ == "__main__":

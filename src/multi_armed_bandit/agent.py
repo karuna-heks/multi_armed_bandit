@@ -9,10 +9,11 @@ from math import sqrt, log10
 
 class Agent:
     
-    def __init__(self, strategy_num=1):
+    def __init__(self, strategy_num=1, verbose=1):
         self.strategy_num = strategy_num # number of possible strategies to choose from
         self.reward_counter = Counter() # reward sum counter for each arm
         self.selection_counter = Counter() # counter of the number of choices of each strategy
+        self.verbose = verbose
         
     
     def _save_step_results(self, step_results):
@@ -72,10 +73,11 @@ class Agent:
             selected = self._select_arm()
             env_select(selected)
             
-            print("results:", step_results)
-            print('reward_c:', self.reward_counter)
-            print('selection_c:', self.selection_counter)
-            print("selected:", selected)
-            print("\n===============================\n")
+            if self.verbose > 0:
+                print("results:", step_results)
+                print('reward_c:', self.reward_counter)
+                print('selection_c:', self.selection_counter)
+                print("selected:", selected)
+                print("\n===============================\n")
 
     
